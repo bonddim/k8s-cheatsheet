@@ -1,0 +1,64 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+$docker_setup = <<-SCRIPT
+echo "Setting up docker ce.."
+
+if [ -e /etc/vagrant_provisioned_at ]
+  then
+    echo "Already provisioned, skipping"
+    exit 0
+fi
+
+yum install -y yum-utils device-mapper-persistent-data lvm2
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install -y docker-ce docker-ce-cli containerd.io
+systemctl enable docker
+systemctl start docker
+
+date > /etc/vagrant_provisioned_at
+echo "Provisioning completed!"
+SCRIPT
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = '2'
+
+Vagrant.require_version '>= 1.5.0'
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  # if Vagrant.has_plugin?("vagrant-omnibus")
+  #   config.omnibus.chef_version = 'latest'
+  # end
+  config.vm.box = 'bento/centos-7.6'
+
+  config.vm.define "master" do |master|
+    master.vm.hostname = 'master.local'
+    master.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "4096"]
+      vb.customize ["modifyvm", :id, "--cpus", "2"]
+      vb.customize ["modifyvm", :id, "--cpuexecutioncap", "80"]
+    end
+
+    master.vm.network :private_network, ip: '172.28.28.10'
+    master.vm.network "forwarded_port", guest: 80, host: 3080
+    master.vm.network "forwarded_port", guest: 443, host: 3443
+
+    master.vm.provision "shell", inline: "swapoff -a"
+    master.vm.provision "shell", inline: $docker_setup
+  end
+
+  config.vm.define "worker" do |worker|
+    worker.vm.hostname = 'worker.local'
+    worker.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "2048"]
+      vb.customize ["modifyvm", :id, "--cpus", "2"]
+      vb.customize ["modifyvm", :id, "--cpuexecutioncap", "80"]
+    end
+
+    worker.vm.network :private_network, ip: '172.28.28.20'
+    worker.vm.network "forwarded_port", guest: 80, host: 4080
+    worker.vm.network "forwarded_port", guest: 443, host: 3243
+
+    worker.vm.provision "shell", inline: "swapoff -a"
+    worker.vm.provision "shell", inline: $docker_setup
+  end
+end
