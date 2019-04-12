@@ -1,3 +1,7 @@
+# Links
+* Presentation: https://docs.google.com/presentation/d/10RURTFacQjXIpQP6FWoT8B5cohPUQsfrIjnD4VBKMFM/edit?usp=sharing
+* cheatsheet: https://github.com/olebel/k8s-cheatsheet 
+
 ## 1. Prerequisites (master and worker)
 #### 1.1 Install docker
 ```
